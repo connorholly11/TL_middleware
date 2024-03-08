@@ -56,7 +56,7 @@ The `tradestation_algo_testing.py` module focuses on retrieving algo orders from
 - `send_order_to_ninjatrader()`: Sends an order to NinjaTrader by creating an OIF file.
 - `process_tradestation_orders()`: Continuously retrieves TradeStation orders, filters algo orders based on the custom tag, and sends them to NinjaTrader.
 
-### streaming.py
+### trade_operations.py
 
 The `streaming.py` module provides functions for streaming data from TradeStation.
 
