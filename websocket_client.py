@@ -4,7 +4,7 @@ import threading
 import time
 from auth import authenticate_user
 from data_logging import append_position_info_to_csv, append_order_info_to_csv, event_logger
-
+import json
 
 def close_websocket_connection(ws):
   ws.close()
@@ -13,23 +13,43 @@ def send_ping(ws):
   ping_msg = ptp.ClientRequestMsg()
   ping_msg.Ping.Connected = True
   ws.send(ping_msg.SerializeToString(), websocket.ABNF.OPCODE_BINARY)
-  threading.Timer(45, send_ping, args=[ws]).start()
+  threading.Timer(5, send_ping, args=[ws]).start()
 
 
-def open_websocket(wss_uri, token):
+def protobuf_to_dict(pb):
+    from google.protobuf.json_format import MessageToDict
+    return MessageToDict(pb, preserving_proto_field_name=True)
+
+def open_websocket(wss_uri, token, socketio):
     def on_message(ws, message):
       try:
         response_msg = ptp.ServerResponseMsg()
         response_msg.ParseFromString(message)
-        print(response_msg)
-        if len(response_msg.OrderInfo) == 1:
-          append_order_info_to_csv(response_msg.BalanceInfo,
-                                   response_msg.OrderInfo)
-        elif len(response_msg.PositionInfo) == 1:
-          append_position_info_to_csv(response_msg.PositionInfo)
-
+        message_dict = protobuf_to_dict(response_msg)  # Convert protobuf message to a dictionary
+        print(message_dict)
+        socketio.emit('update_volumetrica_data', {'message': json.dumps(message_dict)})  # Emit as a JSON string
       except Exception as e:
         print(f"Error processing message: {e}")
+
+    
+    def on_error(ws, error):
+        print("Error: ", error)
+    
+    def on_close(ws):
+        print("### Volumetrica WebSocket Closed ###")
+    
+    def on_open(ws):
+        print("Volumetrica WebSocket Connection Opened")
+        send_ping(ws)
+        # You might need to send an authentication message here, similar to TradeStation
+    
+    ws_app = websocket.WebSocketApp(wss_uri,
+                                    on_open=on_open,
+                                    on_message=on_message,
+                                    on_error=on_error,
+                                    on_close=on_close)
+    
+    ws_app.run_forever()
 
     def on_error(ws, error):
       print("Error: ", error)
@@ -80,8 +100,10 @@ def send_positions_request():
       if len(response_msg.PositionInfo) == 1:
         append_position_info_to_csv(response_msg.PositionInfo)
         close_websocket_connection(ws_pos)
+      socketio.emit('update_data', {'data': 'Your processed message here'})
     except Exception as e:
-      print(f"Error processing POS message: {e}")
+      print(f"Error processing message: {e}")
+
 
   def on_error(ws_pos, error):
     print("Error POS : ", error)

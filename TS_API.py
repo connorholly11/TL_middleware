@@ -1,5 +1,8 @@
 # streaming.py
+
 import requests
+import json
+import socketio  # Import the socketio instance
 
 
 def get_accounts(access_token):
@@ -41,9 +44,6 @@ def start_streaming_positions(access_token, account_ids, changes=False):
     # Invoke the streaming functionality with the provided parameters.
     stream_positions(access_token, account_ids, changes)
 
-
-import requests
-import json
 
 # Existing code remains unchanged...
 
@@ -93,18 +93,29 @@ def stream_bars(access_token, symbol = "MSFT"):
           print(line)
 
 
-def stream_positions_new(account_IDs, access_token):
-  account_IDs_str = ",".join(account_IDs)
+def stream_positions_new(account_IDs, access_token, sio):  # Accept socketio instance as a parameter
+    account_IDs_str = ",".join(account_IDs)
+    
+    url = f"https://sim-api.tradestation.com/v3/brokerage/stream/accounts/SIM1169695f/positions"
+    print(url)
+    headers = {"Authorization": f"Bearer {access_token}"}
+    
+    response = requests.request("GET", url, headers=headers, stream=True)
+    
+    for line in response.iter_lines():
+        if line:
+            decoded_line = line.decode('utf-8')
+            try:
+                message = json.loads(decoded_line)
+                # Concatenate key-value pairs into a single string
+                message_str = ", ".join(f"{key}:{value}" for key, value in message.items())
+                print(message_str)  # Print the concatenated message string for logging
+                sio.emit('update_data', {'message': message_str})  # Emit the single string
+            except json.JSONDecodeError:
+                print("Error decoding JSON")
+            except KeyError as e:
+                print(f"Key error: {e}")
 
-  url = "https://sim-api.tradestation.com/v3/brokerage/stream/accounts/SIM1169695f/orders"
-  print(url)
-  headers = {"Authorization": f"Bearer {access_token}"}
-
-  response = requests.request("GET", url, headers=headers, stream=True)
-
-  for line in response.iter_lines():
-      if line:
-          print(line)
 
 
 def get_positions(account_IDs, access_token):

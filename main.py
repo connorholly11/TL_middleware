@@ -7,26 +7,40 @@ from TS_API import get_accounts, get_historical_orders, stream_positions_new, st
 from websocket_client import open_websocket, send_positions_request
 from tradestation_to_nt import process_tradestation_orders
 
+
+########### FLASK APP START
+
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
+import logging
+import threading
+
 access_token = get_access_token()
+app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
+@app.route('/')
+def index():
+    return render_template('index.html')  # Make sure you have an 'index.html' in your templates directory
 
-def main():
-  if __name__ == "__main__":
-    if access_token:
-        # Example usage of the existing functionality
-        account_ids = ["11045632","SIM1169695f", "210CHOLL"]  #
-        #get_positions(account_ids, access_token)
-    else:
-        print("Failed to authenticate.")
-  
-    token, wss_uri = authenticate_user()
+@socketio.on('connect')
+def test_connect():
+    print("Client connected")
+
+@socketio.on('disconnect')
+def test_disconnect():
+    print("Client disconnected")
+
+def start_websocket_connections():
+    token, wss_uri = authenticate_user()  # Ensure this function returns the necessary token and URI
     
     if token and wss_uri:
-      open_websocket(wss_uri, token)
-  
-  
-main()
+        # Starting TradeStation WebSocket as a background task
+        socketio.start_background_task(stream_positions_new, ["placeholder"], access_token, socketio)
+        
+        # Starting Volumetrica WebSocket as a background task
+        socketio.start_background_task(open_websocket, wss_uri, token, socketio)
 
-
-
-
+if __name__ == "__main__":
+    socketio.start_background_task(start_websocket_connections)
+    socketio.run(app, debug=True, use_reloader=False)

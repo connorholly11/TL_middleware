@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            display: flex;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        .half {
+            width: 50%;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        #tradestation-container {
+            border-right: 1px solid #ccc;
+        }
+        h1, h2, p {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="half" id="tradestation-container">
+        <h1 id="ts-title">Tradestation</h1>
+        <p>Last message received: <span id="last-ts-received-time"></span></p>
+        <p id="ts-disconnects">Disconnects: 0</p>
+        <h2>Tradestation Logs</h2>
+        <div id="ts-messages-display"></div>
+    </div>
+    <div class="half" id="volumetrica-container">
+        <h1 id="volumetrica-title">Volumetrica</h1>
+        <p>Last message received: <span id="last-volumetrica-received-time"></span></p>
+        <p id="volumetrica-disconnects">Disconnects: 0</p>
+        <h2>Volumetrica Logs</h2>
+        <div id="volumetrica-messages-display"></div>
+    </div>
+    <script type="text/javascript">
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var tsMessages = [];
+        var volumetricaMessages = [];
+        var lastTSMessageTime = new Date();
+        var lastVolumetricaMessageTime = new Date();
+        var tsDisconnects = 0;
+        var volumetricaDisconnects = 0;
+        var tsWasConnected = true; // Assume initially connected
+        var volumetricaWasConnected = true; // Assume initially connected
+    
+        function updateTitleBasedOnConnection() {
+            var now = new Date();
+            var tsConnected = now - lastTSMessageTime < 15000;
+            var volumetricaConnected = now - lastVolumetricaMessageTime < 15000;
+    
+            document.getElementById('ts-title').style.color = tsConnected ? "green" : "red";
+            document.getElementById('volumetrica-title').style.color = volumetricaConnected ? "green" : "red";
+    
+            if (!tsConnected && tsWasConnected) {
+                tsDisconnects++;
+                tsWasConnected = false;
+            } else if (tsConnected) {
+                tsWasConnected = true;
+            }
+    
+            if (!volumetricaConnected && volumetricaWasConnected) {
+                volumetricaDisconnects++;
+                volumetricaWasConnected = false;
+            } else if (volumetricaConnected) {
+                volumetricaWasConnected = true;
+            }
+    
+            document.getElementById('ts-disconnects').innerText = 'Disconnects: ' + tsDisconnects;
+            document.getElementById('volumetrica-disconnects').innerText = 'Disconnects: ' + volumetricaDisconnects;
+        }
+
+        socket.on('update_data', function(data) {
+            lastTSMessageTime = new Date();
+            tsMessages.unshift(data.message);
+            if (tsMessages.length > 20) tsMessages.pop();
+            document.getElementById('last-ts-received-time').innerText = lastTSMessageTime.toLocaleTimeString();
+            document.getElementById('ts-messages-display').innerHTML = tsMessages.map(function(msg, index) {
+                return '<p>' + (index + 1) + ': ' + msg + '</p>';
+            }).join('');
+        });
+
+        socket.on('update_volumetrica_data', function(data) {
+            lastVolumetricaMessageTime = new Date();
+            volumetricaMessages.unshift(data.message);
+            if (volumetricaMessages.length > 20) volumetricaMessages.pop();
+            document.getElementById('last-volumetrica-received-time').innerText = lastVolumetricaMessageTime.toLocaleTimeString();
+            document.getElementById('volumetrica-messages-display').innerHTML = volumetricaMessages.map(function(msg, index) {
+                return '<p>' + (index + 1) + ': ' + msg + '</p>';
+            }).join('');
+        });
+
+        setInterval(updateTitleBasedOnConnection, 5000);
+    </script>
+</body>
+</html>

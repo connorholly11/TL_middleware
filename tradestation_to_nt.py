@@ -34,7 +34,7 @@ def send_order_to_ninjatrader(order):
 
     timestamp_ns = int(time.time() * 1e9)
     file_name = f"oif{timestamp_ns}.txt"
-    file_path = rf"C:\Users\connor holly\Documents\NinjaTrader 8\incoming\{file_name}"
+    file_path = rf"C:\Users\King David\Documents\NinjaTrader 8\incoming\{file_name}"
 
     try:
         with open(file_path, 'w') as file:
