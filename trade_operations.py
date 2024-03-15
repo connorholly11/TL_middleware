@@ -22,7 +22,7 @@ def send_orders(access_token, symbol, quantity, trade_action):
     }
 
     print(payload)
-
+git commit 
     headers = {
         "content-type": "application/json",
         "Authorization": f"Bearer {access_token}"
