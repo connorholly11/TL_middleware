@@ -114,8 +114,11 @@ def stream_positions_new(account_IDs, access_token, sio):  # Accept socketio ins
                 sio.emit('update_data', {'message': message_str})  # Emit the single string
             except json.JSONDecodeError:
                 print("Error decoding JSON")
+                sio.emit('update_data', {'message': f'Error decoding JSON'})  # Emit the cleaned message
+
             except KeyError as e:
                 print(f"Key error: {e}")
+                sio.emit('update_data', {'message': f'Key error: {e}'})  # Emit the cleaned message
 
 
 

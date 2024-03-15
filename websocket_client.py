@@ -6,6 +6,11 @@ from auth import authenticate_user
 from data_logging import append_position_info_to_csv, append_order_info_to_csv, event_logger
 import json
 
+
+
+reconnection_attempts = 0
+
+
 def close_websocket_connection(ws):
   ws.close()
   
@@ -49,41 +54,37 @@ def open_websocket(wss_uri, token, socketio):
             socketio.emit('update_volumetrica_data', {'message': clean_message})  # Emit the cleaned message
         except Exception as e:
             print(f"Error processing message: {e}")
+            event_logger("Volumetrica WS", f"Error processing message: {str(e)}")
+            socketio.emit('update_volumetrica_data', {'message': f'Error processing message: {str(e)}'})
 
     
     def on_error(ws, error):
         print("Error: ", error)
-    
-    def on_close(ws):
-        print("### Volumetrica WebSocket Closed ###")
-    
-    def on_open(ws):
-        print("Volumetrica WebSocket Connection Opened")
-        send_ping(ws)
-        # You might need to send an authentication message here, similar to TradeStation
-    
-    ws_app = websocket.WebSocketApp(wss_uri,
-                                    on_open=on_open,
-                                    on_message=on_message,
-                                    on_error=on_error,
-                                    on_close=on_close)
-    
-    ws_app.run_forever()
-
-    def on_error(ws, error):
-      print("Error: ", error)
-      event_logger("main_ws", error)
+        event_logger("Volumetrica WS", f"Error: {str(error)}")
+        socketio.emit('update_volumetrica_data', {'message': f'Error: {str(error)}'})
 
     def on_close(ws, close_status_code, close_msg):
-      i = 10
-      if i != 0:
+      if reconnection_attempts < 1000:
         print("### closed ###")
-        event_logger("main_ws", "closed")
-        time.sleep(3)
+        event_logger("Volumetrica WS", f"closeded status code: {close_status_code}: {close_msg}")
+        socketio.emit('update_volumetrica_data', {'message': f'closeded status code: {close_status_code}: {close_msg}'})
+
+        time.sleep(4)
+                
+        print(f"Volumetrica WS Reconnecting... Try #{reconnection_attempts}")
+
+        event_logger("Volumetrica WS", f"Reconnecting... Try #{reconnection_attempts}")
+        socketio.emit('update_volumetrica_data', {'message': f'Reconnecting... Try #{reconnection_attempts}'})
+
         token, wss_uri = authenticate_user()
         if token and wss_uri:
           open_websocket(wss_uri, token)
-        i -=1
+        reconnection_attempts +=1
+      else:
+        print(f"Volumetrica WS Reconnection attempt failed too many times, giving up.")
+        socketio.emit('update_volumetrica_data', {'message': f'Reconnection attempt failed too many times, giving up.'})
+        event_logger("Volumetrica WS", f"Reconnection attempt failed too many times, giving up.")
+
 
 
     def on_open(ws):
@@ -93,8 +94,10 @@ def open_websocket(wss_uri, token, socketio):
       ws.send(login_binary_message, websocket.ABNF.OPCODE_BINARY)
       print("Connection opened")
       send_ping(ws)
-      send_positions_request()
-    
+      #send_positions_request()
+      event_logger("Volumetrica WS", f"Connection Opened")
+      socketio.emit('update_volumetrica_data', {'message': 'Connection Opened'})
+
     try:
       ws = websocket.WebSocketApp(wss_uri,
                                   on_open=on_open,
@@ -105,6 +108,20 @@ def open_websocket(wss_uri, token, socketio):
       ws.run_forever()
     except:
       return print("Authentication failure.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

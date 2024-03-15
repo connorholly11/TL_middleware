@@ -27,6 +27,7 @@
 <body>
     <div class="half" id="tradestation-container">
         <h1 id="ts-title">Tradestation</h1>
+        <label><input type="checkbox" id="hide-heartbeat"> Hide heartbeat</label>
         <p>Last message received: <span id="last-ts-received-time"></span></p>
         <p id="ts-disconnects">Disconnects: 0</p>
         <h2>Tradestation Logs</h2>
@@ -34,6 +35,8 @@
     </div>
     <div class="half" id="volumetrica-container">
         <h1 id="volumetrica-title">Volumetrica</h1>
+        <input type="checkbox" id="hide-pong"> Hide Pong
+
         <p>Last message received: <span id="last-volumetrica-received-time"></span></p>
         <p id="volumetrica-disconnects">Disconnects: 0</p>
         <h2>Volumetrica Logs</h2>
@@ -41,19 +44,50 @@
     </div>
     <script type="text/javascript">
         var socket = io.connect('http://' + document.domain + ':' + location.port);
-        var tsMessages = [];
-        var volumetricaMessages = [];
-        var lastTSMessageTime = new Date();
+        var backendVolumetricaMessages = []; // Backend store for Volumetrica messages, similar to TradeStation messages
+        var volumetricaMessagesDisplayLimit = 2000; // Double the backend list size for more flexibility in filtering
         var lastVolumetricaMessageTime = new Date();
-        var tsDisconnects = 0;
         var volumetricaDisconnects = 0;
-        var tsWasConnected = true; // Assume initially connected
-        var volumetricaWasConnected = true; // Assume initially connected
+        var volumetricaWasConnected = false; // Assume initially connected
+        var backendTsMessages = []; // Already defined, for context
+        var tsMessagesDisplayLimit = 2000; // backend list size for more flexibility in filtering
+        var displayLimit = 20; // Actual number of messages to display
+        var lastTSMessageTime = new Date();
+        var tsDisconnects = 0;
+        var tsWasConnected = false; // Initially assume disconnected for the logic to work correctly
+    
+        function formatMessageWithTimestamp(message) {
+            var now = new Date();
+            return now.toLocaleTimeString() + ": " + message; // Format: "HH:MM:SS: message"
+        }
+    
+        function updateTsMessagesDisplay() {
+            var hideHeartbeat = document.getElementById("hide-heartbeat").checked;
+            var filteredMessages = backendTsMessages.filter(function(message) {
+                return !(hideHeartbeat && message.includes("Heartbeat"));
+            }).slice(0, displayLimit);
+    
+            document.getElementById('ts-messages-display').innerHTML = filteredMessages.map(function(msg, index) {
+                return '<p>' + (index + 1) + ': ' + msg + '</p>';
+            }).join('');
+        }
+    
+        // New function to update Volumetrica messages display
+        function updateVolumetricaMessagesDisplay() {
+            var hidePong = document.getElementById("hide-pong").checked; // Assuming you have a checkbox with id "hide-pong"
+            var filteredMessages = backendVolumetricaMessages.filter(function(message) {
+                return !(hidePong && message.includes("Pong"));
+            }).slice(0, displayLimit);
+    
+            document.getElementById('volumetrica-messages-display').innerHTML = filteredMessages.map(function(msg, index) {
+                return '<p>' + (index + 1) + ': ' + msg + '</p>';
+            }).join('');
+        }
     
         function updateTitleBasedOnConnection() {
             var now = new Date();
-            var tsConnected = now - lastTSMessageTime < 15000;
-            var volumetricaConnected = now - lastVolumetricaMessageTime < 15000;
+            var tsConnected = now - lastTSMessageTime < 5000;
+            var volumetricaConnected = now - lastVolumetricaMessageTime < 5000;
     
             document.getElementById('ts-title').style.color = tsConnected ? "green" : "red";
             document.getElementById('volumetrica-title').style.color = volumetricaConnected ? "green" : "red";
@@ -74,29 +108,45 @@
     
             document.getElementById('ts-disconnects').innerText = 'Disconnects: ' + tsDisconnects;
             document.getElementById('volumetrica-disconnects').innerText = 'Disconnects: ' + volumetricaDisconnects;
-        }
-
+            }
+    
+    
         socket.on('update_data', function(data) {
-            lastTSMessageTime = new Date();
-            tsMessages.unshift(data.message);
-            if (tsMessages.length > 20) tsMessages.pop();
-            document.getElementById('last-ts-received-time').innerText = lastTSMessageTime.toLocaleTimeString();
-            document.getElementById('ts-messages-display').innerHTML = tsMessages.map(function(msg, index) {
-                return '<p>' + (index + 1) + ': ' + msg + '</p>';
-            }).join('');
+            lastTSMessageTime = new Date(); // Update the timestamp when a new message is received
+            var formattedMessage = formatMessageWithTimestamp(data.message);
+            backendTsMessages.unshift(formattedMessage); // Prepend the formatted message to the backend list
+            document.getElementById('last-ts-received-time').innerText = lastVolumetricaMessageTime.toLocaleTimeString();
+    
+            if (backendTsMessages.length > tsMessagesDisplayLimit) {
+                backendTsMessages.length = tsMessagesDisplayLimit; // Trim the backend list if it exceeds the limit
+            }
+    
+            updateTsMessagesDisplay(); // Dynamically update the displayed messages
         });
-
+    
+        document.getElementById('hide-heartbeat').addEventListener('change', updateTsMessagesDisplay);
+    
+        document.getElementById('hide-heartbeat').addEventListener('change', updateTsMessagesDisplay);
+    
+        // Assuming you've added a similar checkbox for hiding Pong messages in Volumetrica section
+        document.getElementById('hide-pong').addEventListener('change', updateVolumetricaMessagesDisplay);
+    
         socket.on('update_volumetrica_data', function(data) {
-            lastVolumetricaMessageTime = new Date();
-            volumetricaMessages.unshift(data.message);
-            if (volumetricaMessages.length > 20) volumetricaMessages.pop();
-            document.getElementById('last-volumetrica-received-time').innerText = lastVolumetricaMessageTime.toLocaleTimeString();
-            document.getElementById('volumetrica-messages-display').innerHTML = volumetricaMessages.map(function(msg, index) {
-                return '<p>' + (index + 1) + ': ' + msg + '</p>';
-            }).join('');
+            lastVolumetricaMessageTime = new Date(); // Update the timestamp when a new message is received
+            var formattedMessage = formatMessageWithTimestamp(data.message);
+            backendVolumetricaMessages.unshift(formattedMessage); // Prepend the formatted message to the backend list
+    
+            if (backendVolumetricaMessages.length > volumetricaMessagesDisplayLimit) {
+                backendVolumetricaMessages.length = volumetricaMessagesDisplayLimit; // Trim the backend list if it exceeds the limit
+            }
+    
+            updateVolumetricaMessagesDisplay(); // Dynamically update the displayed messages
         });
-
+    
         setInterval(updateTitleBasedOnConnection, 5000);
     </script>
 </body>
 </html>
+
+
+
