@@ -1,0 +1,5 @@
+Tradestation positions dashboard
+Tradestation orders list
+Connect html with python - so that NT/TS/ different users might be connected/disconnected
+Fix all other TS functions with the new message processing logic
+Go over NT order logic

@@ -52,6 +52,14 @@ def open_websocket(wss_uri, token, socketio):
             print(clean_message)  # Print the cleaned message
             event_logger("Volumetrica WS", str(clean_message))
             socketio.emit('update_volumetrica_data', {'message': clean_message})  # Emit the cleaned message
+
+
+            if len(response_msg.OrderInfo) == 1:
+              append_order_info_to_csv(response_msg.BalanceInfo,
+                                      response_msg.OrderInfo)
+            elif len(response_msg.PositionInfo) == 1:
+              append_position_info_to_csv(response_msg.PositionInfo)
+
         except Exception as e:
             print(f"Error processing message: {e}")
             event_logger("Volumetrica WS", f"Error processing message: {str(e)}")

@@ -18,7 +18,7 @@ def get_bars(access_token, symbol, barsback, lastdate):
     return response.json()
 
 
-def stream_positions(access_token, account_ids, changes=False):
+def stream_positions(access_token, account_ids, changes=True):
     # Construct the URL for streaming positions, including the 'changes' query parameter if needed.
     url = f"https://api.tradestation.com/v3/brokerage/stream/accounts/{account_ids}/positions"
     if changes:
@@ -47,7 +47,7 @@ def start_streaming_positions(access_token, account_ids, changes=False):
 
 # Existing code remains unchanged...
 
-def stream_positions_with_details(access_token, account_ids, changes=False):
+def stream_positions_with_details(access_token, account_ids, changes=True):
     # Convert list of account IDs to a comma-separated string if necessary
     account_ids_str = ','.join(account_ids) if isinstance(account_ids, list) else account_ids
 

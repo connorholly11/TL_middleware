@@ -1,9 +1,12 @@
 import requests
 from auth import get_access_token
 import time
+import getpass
 import os
 
+username = getpass.getuser()
 access_token = get_access_token()
+username = getpass.getuser()
 
 def send_orders(access_token, symbol, quantity, trade_action):
     url = "https://sim-api.tradestation.com/v3/orderexecution/orders"
@@ -37,13 +40,11 @@ def trade_copier(row):
     price = row['AvgPrice']
     quantity = abs(row['FilledQty'])
 
-    # Convert the symbols using list comprehension and the mapping
-    symbol_mapping = {
-        "/NQH24:XCME": "NQH24",
-        "/ESH24:XCME": "ESH24",
-    }
-    converted_symbol_nt = symbol_mapping.get(symbol, symbol)
-    converted_symbol_ts = symbol_mapping.get(symbol, symbol).replace('/', '')
+
+    converted_symbol_nt = symbol
+    converted_symbol_ts = symbol.replace('/', '')
+    converted_symbol_ts = symbol.replace(':XCME', '')
+
     trade_action = "BUY" if original_action == "1" else "SELL"  # should be fading like this
 
     # Generate the OIF order string
@@ -54,7 +55,7 @@ def trade_copier(row):
     file_name = f"oif{timestamp_ns}.txt"
 
     # Define the file path including the dynamic file name
-    file_path = rf"C:\Users\connor holly\Documents\NinjaTrader 8\incoming\{file_name}"
+    file_path = rf"C:\Users\{username}\Documents\NinjaTrader 8\incoming\{file_name}"
 
     # Save the NT_order string into the dynamically named file
     with open(file_path, 'w') as file:
@@ -64,7 +65,6 @@ def trade_copier(row):
     print("This order came from trade_copier (Volumetrica)")
 
     send_orders(access_token, converted_symbol_ts, quantity, trade_action)
-
     print(f"FIX Message: 8=FIX.4.2|35=D|55={symbol}|54={flipped_action}|40=2|44={price}|38={quantity}")
 
 
