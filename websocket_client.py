@@ -22,14 +22,33 @@ def protobuf_to_dict(pb):
 
 def open_websocket(wss_uri, token, socketio):
     def on_message(ws, message):
-      try:
-        response_msg = ptp.ServerResponseMsg()
-        response_msg.ParseFromString(message)
-        message_dict = protobuf_to_dict(response_msg)  # Convert protobuf message to a dictionary
-        print(message_dict)
-        socketio.emit('update_volumetrica_data', {'message': json.dumps(message_dict)})  # Emit as a JSON string
-      except Exception as e:
-        print(f"Error processing message: {e}")
+        try:
+            response_msg = ptp.ServerResponseMsg()
+            response_msg.ParseFromString(message)
+            message_dict = protobuf_to_dict(response_msg)  # Convert protobuf message to a dictionary
+
+            # Initialize an empty list to hold our formatted message components
+            formatted_messages = []
+
+            # Iterate over each key-value pair in the message dictionary
+            for key, value in message_dict.items():
+                if isinstance(value, dict):
+                    # For nested dictionaries, you could either convert them to a string
+                    # or further iterate over their contents. Here, we convert to string for simplicity.
+                    formatted_value = json.dumps(value)
+                else:
+                    formatted_value = str(value)
+                
+                formatted_messages.append(f"{key}: {formatted_value}")
+
+            # Join all formatted message components with a comma
+            clean_message = ", ".join(formatted_messages)
+
+            print(clean_message)  # Print the cleaned message
+            event_logger("Volumetrica WS", str(clean_message))
+            socketio.emit('update_volumetrica_data', {'message': clean_message})  # Emit the cleaned message
+        except Exception as e:
+            print(f"Error processing message: {e}")
 
     
     def on_error(ws, error):

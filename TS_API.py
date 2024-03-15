@@ -3,7 +3,7 @@
 import requests
 import json
 import socketio  # Import the socketio instance
-
+from data_logging import append_position_info_to_csv, append_order_info_to_csv, event_logger
 
 def get_accounts(access_token):
     url = "https://api.tradestation.com/v3/brokerage/accounts"
@@ -110,6 +110,7 @@ def stream_positions_new(account_IDs, access_token, sio):  # Accept socketio ins
                 # Concatenate key-value pairs into a single string
                 message_str = ", ".join(f"{key}:{value}" for key, value in message.items())
                 print(message_str)  # Print the concatenated message string for logging
+                event_logger("Tradestation WS", message_str)
                 sio.emit('update_data', {'message': message_str})  # Emit the single string
             except json.JSONDecodeError:
                 print("Error decoding JSON")
