@@ -30,6 +30,23 @@
         <label><input type="checkbox" id="hide-heartbeat"> Hide heartbeat</label>
         <p>Last message received: <span id="last-ts-received-time"></span></p>
         <p id="ts-disconnects">Disconnects: 0</p>
+        <div id="opened-positions">
+            <h2>Opened Positions</h2>
+            <table id="positions-table">
+                <tr>
+                    <th>PositionID</th>
+                    <th>Symbol</th>
+                    <th>Long/Short</th>
+                    <th>Quantity</th>
+                    <th>Average Price</th>
+                    <th>Unrealized P/L</th>
+                    <th>Unrealized P/L %</th>
+                </tr>
+                <!-- Position rows will be dynamically inserted here -->
+            </table>
+        </div>
+
+
         <h2>Tradestation Logs</h2>
         <div id="ts-messages-display"></div>
     </div>
@@ -109,7 +126,54 @@
             document.getElementById('ts-disconnects').innerText = 'Disconnects: ' + tsDisconnects;
             document.getElementById('volumetrica-disconnects').innerText = 'Disconnects: ' + volumetricaDisconnects;
             }
-    
+            socket.on('update_positions', function(data) {
+    var positionData = JSON.parse(data.data);
+    var table = document.getElementById('positions-table');
+
+    // Check if the position is being closed
+    if (positionData.Symbol === null) {
+        // Find the row with matching PositionID and delete it
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            if (row.cells[0].innerHTML === positionData.PositionID.toString()) {
+                table.deleteRow(i);
+                break; // Exit the loop after removing the row
+            }
+        }
+    } else {
+        // The position is open or updated, handle as before
+        var rowExists = false;
+
+        // Check if row with PositionID already exists
+        for (var i = 1, row; row = table.rows[i]; i++) {
+            if (row.cells[0].innerHTML === positionData.PositionID.toString()) {
+                // Update the existing row
+                row.cells[2].innerHTML = positionData.LongShort;
+                row.cells[3].innerHTML = positionData.Quantity;
+                row.cells[4].innerHTML = positionData.AveragePrice;
+                row.cells[5].innerHTML = positionData.UnrealizedProfitLoss;
+                row.cells[6].innerHTML = positionData.UnrealizedProfitLossPercent;
+                rowExists = true;
+                break; // Stop the loop once the matching row is found and updated
+            }
+        }
+
+        // If the row doesn't exist, create a new one
+        if (!rowExists) {
+            var newRow = table.insertRow(-1);
+            for (var j = 0; j < 7; j++) {
+                newRow.insertCell(-1);
+            }
+            newRow.cells[0].innerHTML = positionData.PositionID;
+            newRow.cells[1].innerHTML = positionData.Symbol;
+            newRow.cells[2].innerHTML = positionData.LongShort;
+            newRow.cells[3].innerHTML = positionData.Quantity;
+            newRow.cells[4].innerHTML = positionData.AveragePrice;
+            newRow.cells[5].innerHTML = positionData.UnrealizedProfitLoss;
+            newRow.cells[6].innerHTML = positionData.UnrealizedProfitLossPercent;
+        }
+    }
+});
+
     
         socket.on('update_data', function(data) {
             lastTSMessageTime = new Date(); // Update the timestamp when a new message is received

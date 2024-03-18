@@ -5,6 +5,110 @@ import json
 import socketio  # Import the socketio instance
 from data_logging import append_position_info_to_csv, append_order_info_to_csv, event_logger
 
+
+def ts_position_reporter(position_data, sio):
+    # Assuming position_data is the dictionary with the position info
+    report_fields = [
+        'PositionID', 'Symbol', 'LongShort', 'Quantity',
+        'AveragePrice', 'UnrealizedProfitLoss', 'UnrealizedProfitLossPercent'
+    ]
+
+    # Extract the relevant fields from the position data
+    report_data = {field: position_data.get(field, None) for field in report_fields}
+    # Convert the report data to a string formatted for display or further processing
+    report_str = json.dumps(report_data)
+    print(report_str)  # For logging
+    print(f"REPORT DATA: {report_str}")
+
+    # Emit the processed position report to the client
+    sio.emit('update_positions', {'data': report_str})
+
+def stream_positions_new(account_IDs, access_token, sio):  # Accept socketio instance as a parameter
+    account_IDs_str = ",".join(account_IDs)
+    
+    url = f"https://sim-api.tradestation.com/v3/brokerage/stream/accounts/SIM1169695f/positions"
+    print(url)
+    headers = {"Authorization": f"Bearer {access_token}"}
+    
+    response = requests.request("GET", url, headers=headers, stream=True)
+    
+    for line in response.iter_lines():
+        if line:
+            decoded_line = line.decode('utf-8')
+            try:
+                message = json.loads(decoded_line)
+                ts_position_reporter(message, sio)
+
+                # Concatenate key-value pairs into a single string
+                message_str = ", ".join(f"{key}:{value}" for key, value in message.items())
+                print(message_str)  # Print the concatenated message string for logging
+
+                event_logger("Tradestation WS", message_str)
+                sio.emit('update_data', {'message': message_str})  # Emit the single string
+            except json.JSONDecodeError:
+                print("Error decoding JSON")
+                sio.emit('update_data', {'message': f'Error decoding JSON'})  # Emit the cleaned message
+
+            except KeyError as e:
+                print(f"Key error: {e}")
+                sio.emit('update_data', {'message': f'Key error: {e}'})  # Emit the cleaned message
+
+
+
+
+
+
+
+
+###### OLD (YET) UNUSED FUNCTIONS BELOW THIS COMMENT
+
+
+
+
+def get_positions(account_IDs, access_token):
+  account_IDs_str = ",".join(account_IDs)
+
+  # Assuming account_IDs is either a single ID or a list of IDs joined by commas already
+  url = f"https://sim-api.tradestation.com/v3/brokerage/accounts/{account_IDs_str}/positions"
+  
+  headers = {"Authorization": f"Bearer {access_token}"}
+  
+  response = requests.request("GET", url, headers=headers)
+  
+  print(response.text)
+
+def get_historical_orders(account_IDs, access_token):
+  account_IDs_str = ",".join(account_IDs)
+
+  url = f"https://api.tradestation.com/v3/brokerage/accounts/210A6482/historicalorders"
+  print(url)
+  querystring = {"since":"2024-01-03"}
+  
+  headers = {"Authorization": f"Bearer {access_token}"}
+  
+  response = requests.request("GET", url, headers=headers, params=querystring)
+
+  # Assuming the response is in JSON format
+  response_data = response.json()
+
+
+
+  # Print the Orders content
+  print("Response:", response_data)
+
+  # Check if Orders is present and not empty
+  if response_data.get('Orders'):
+      print("Orders:")
+      for order in response_data['Orders']:
+          # Assuming each order is a dictionary, print each key-value pair
+          for key, value in order.items():
+              print(f"  {key}: {value}")
+          print()  # Print a newline for readability between orders
+  else:
+      print("No orders found.")
+
+
+      
 def get_accounts(access_token):
     url = "https://api.tradestation.com/v3/brokerage/accounts"
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -91,75 +195,3 @@ def stream_bars(access_token, symbol = "MSFT"):
   for line in response.iter_lines():
       if line:
           print(line)
-
-
-def stream_positions_new(account_IDs, access_token, sio):  # Accept socketio instance as a parameter
-    account_IDs_str = ",".join(account_IDs)
-    
-    url = f"https://sim-api.tradestation.com/v3/brokerage/stream/accounts/SIM1169695f/positions"
-    print(url)
-    headers = {"Authorization": f"Bearer {access_token}"}
-    
-    response = requests.request("GET", url, headers=headers, stream=True)
-    
-    for line in response.iter_lines():
-        if line:
-            decoded_line = line.decode('utf-8')
-            try:
-                message = json.loads(decoded_line)
-                # Concatenate key-value pairs into a single string
-                message_str = ", ".join(f"{key}:{value}" for key, value in message.items())
-                print(message_str)  # Print the concatenated message string for logging
-                event_logger("Tradestation WS", message_str)
-                sio.emit('update_data', {'message': message_str})  # Emit the single string
-            except json.JSONDecodeError:
-                print("Error decoding JSON")
-                sio.emit('update_data', {'message': f'Error decoding JSON'})  # Emit the cleaned message
-
-            except KeyError as e:
-                print(f"Key error: {e}")
-                sio.emit('update_data', {'message': f'Key error: {e}'})  # Emit the cleaned message
-
-
-
-def get_positions(account_IDs, access_token):
-  account_IDs_str = ",".join(account_IDs)
-
-  # Assuming account_IDs is either a single ID or a list of IDs joined by commas already
-  url = f"https://sim-api.tradestation.com/v3/brokerage/accounts/{account_IDs_str}/positions"
-  
-  headers = {"Authorization": f"Bearer {access_token}"}
-  
-  response = requests.request("GET", url, headers=headers)
-  
-  print(response.text)
-
-def get_historical_orders(account_IDs, access_token):
-  account_IDs_str = ",".join(account_IDs)
-
-  url = f"https://api.tradestation.com/v3/brokerage/accounts/210A6482/historicalorders"
-  print(url)
-  querystring = {"since":"2024-01-03"}
-  
-  headers = {"Authorization": f"Bearer {access_token}"}
-  
-  response = requests.request("GET", url, headers=headers, params=querystring)
-
-  # Assuming the response is in JSON format
-  response_data = response.json()
-
-
-
-  # Print the Orders content
-  print("Response:", response_data)
-
-  # Check if Orders is present and not empty
-  if response_data.get('Orders'):
-      print("Orders:")
-      for order in response_data['Orders']:
-          # Assuming each order is a dictionary, print each key-value pair
-          for key, value in order.items():
-              print(f"  {key}: {value}")
-          print()  # Print a newline for readability between orders
-  else:
-      print("No orders found.")

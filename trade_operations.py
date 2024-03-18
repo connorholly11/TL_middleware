@@ -22,7 +22,6 @@ def send_orders(access_token, symbol, quantity, trade_action):
     }
 
     print(payload)
-git commit 
     headers = {
         "content-type": "application/json",
         "Authorization": f"Bearer {access_token}"
@@ -43,7 +42,7 @@ def trade_copier(row):
 
     converted_symbol_nt = symbol
     converted_symbol_ts = symbol.replace('/', '')
-    converted_symbol_ts = symbol.replace(':XCME', '')
+    converted_symbol_ts = converted_symbol_ts.replace(':XCME', '')
 
     trade_action = "BUY" if original_action == "1" else "SELL"  # should be fading like this
 
