@@ -21,11 +21,10 @@ def ts_position_reporter(position_data, sio):
     print(f"REPORT DATA: {report_str}")
 
     # Emit the processed position report to the client
-    sio.emit('update_positions', {'data': report_str})
+    sio.emit('ts-update_positions', {'data': report_str})
 
 def stream_positions_new(account_IDs, access_token, sio):  # Accept socketio instance as a parameter
     account_IDs_str = ",".join(account_IDs)
-    
     url = f"https://sim-api.tradestation.com/v3/brokerage/stream/accounts/SIM1169695f/positions"
     print(url)
     headers = {"Authorization": f"Bearer {access_token}"}

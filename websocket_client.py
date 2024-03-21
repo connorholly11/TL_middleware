@@ -9,6 +9,29 @@ import json
 
 
 reconnection_attempts = 0
+def volumetrica_position_reporter(positions_data, sio):
+    # Ensure positions_data is treated correctly as a list of dictionaries
+    aggregated_reports = []  # Will hold all formatted position reports
+    
+    for position_data in positions_data:
+        report_fields = [
+            'AccNumber', 'FeedSymbol', 'OpenQuantity', 'OpenPrice',
+            'OpenPl', 'DailyPl', 'DailyCommissions'
+        ]
+
+        # Extract the relevant fields from each position data dictionary
+        report_data = {field: position_data.get(field, None) for field in report_fields}
+        aggregated_reports.append(report_data)
+    
+    # Convert the list of aggregated reports to a JSON string for transmission
+    report_str = json.dumps(aggregated_reports)
+    print(f"REPORT DATA: {report_str}")  # For logging
+
+    # Emit the processed position reports to the client as a single package
+    sio.emit('volumetrica-update_positions', {'data': report_str})
+
+
+
 
 
 def close_websocket_connection(ws):
@@ -30,7 +53,12 @@ def open_websocket(wss_uri, token, socketio):
         try:
             response_msg = ptp.ServerResponseMsg()
             response_msg.ParseFromString(message)
+            print(f"{response_msg}")
+            socketio.emit('update_volumetrica_data', {'message': f'{response_msg}'})  # Emit the cleaned message
+
             message_dict = protobuf_to_dict(response_msg)  # Convert protobuf message to a dictionary
+            if 'PositionInfo' in message_dict:
+              volumetrica_position_reporter(message_dict['PositionInfo'], socketio)
 
             # Initialize an empty list to hold our formatted message components
             formatted_messages = []
@@ -45,7 +73,6 @@ def open_websocket(wss_uri, token, socketio):
                     formatted_value = str(value)
                 
                 formatted_messages.append(f"{key}: {formatted_value}")
-
             # Join all formatted message components with a comma
             clean_message = ", ".join(formatted_messages)
 
@@ -102,9 +129,14 @@ def open_websocket(wss_uri, token, socketio):
       ws.send(login_binary_message, websocket.ABNF.OPCODE_BINARY)
       print("Connection opened")
       send_ping(ws)
-      #send_positions_request()
       event_logger("Volumetrica WS", f"Connection Opened")
       socketio.emit('update_volumetrica_data', {'message': 'Connection Opened'})
+      request_msg = ptp.ClientRequestMsg()
+      request_msg.InfoReq.AccountListFilterStatus = -1
+      request_msg.InfoReq.Modes.append(1)
+      request_msg.InfoReq.Modes.append(3)
+      request_msg.InfoReq.RequestId = 5
+      ws.send(request_msg.SerializeToString(), websocket.ABNF.OPCODE_BINARY)
 
     try:
       ws = websocket.WebSocketApp(wss_uri,
@@ -133,7 +165,7 @@ def open_websocket(wss_uri, token, socketio):
 
 
 
-
+##### outdated
 def send_positions_request():
   token, wss_uri = authenticate_user()
   def on_message(ws_pos, message):
@@ -144,7 +176,7 @@ def send_positions_request():
       if len(response_msg.PositionInfo) == 1:
         append_position_info_to_csv(response_msg.PositionInfo)
         close_websocket_connection(ws_pos)
-      socketio.emit('update_data', {'data': 'Your processed message here'})
+      socketio.emit('ts-update_data', {'data': 'Your processed message here'})
     except Exception as e:
       print(f"Error processing message: {e}")
 

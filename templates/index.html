@@ -30,9 +30,9 @@
         <label><input type="checkbox" id="hide-heartbeat"> Hide heartbeat</label>
         <p>Last message received: <span id="last-ts-received-time"></span></p>
         <p id="ts-disconnects">Disconnects: 0</p>
-        <div id="opened-positions">
+        <div id="ts-opened-positions">
             <h2>Opened Positions</h2>
-            <table id="positions-table">
+            <table id="ts-positions-table">
                 <tr>
                     <th>PositionID</th>
                     <th>Symbol</th>
@@ -56,6 +56,21 @@
 
         <p>Last message received: <span id="last-volumetrica-received-time"></span></p>
         <p id="volumetrica-disconnects">Disconnects: 0</p>
+        <div id="volumetrica-opened-positions">
+            <h2>Opened Positions</h2>
+            <table id="volumetrica-positions-table">
+                <tr>
+                    <th>AccNumber</th>
+                    <th>FeedSymbol</th>
+                    <th>OpenQuantity</th>
+                    <th>OpenPrice</th>
+                    <th>OpenPl</th>
+                    <th>DailyPl</th>
+                    <th>DailyCommissions</th>
+                </tr>
+                <!-- Position rows will be dynamically inserted here -->
+            </table>
+        </div>
         <h2>Volumetrica Logs</h2>
         <div id="volumetrica-messages-display"></div>
     </div>
@@ -126,9 +141,9 @@
             document.getElementById('ts-disconnects').innerText = 'Disconnects: ' + tsDisconnects;
             document.getElementById('volumetrica-disconnects').innerText = 'Disconnects: ' + volumetricaDisconnects;
             }
-            socket.on('update_positions', function(data) {
+            socket.on('ts-update_positions', function(data) {
     var positionData = JSON.parse(data.data);
-    var table = document.getElementById('positions-table');
+    var table = document.getElementById('ts-positions-table');
 
     // Check if the position is being closed
     if (positionData.Symbol === null) {
@@ -175,7 +190,7 @@
 });
 
     
-        socket.on('update_data', function(data) {
+        socket.on('ts-update_data', function(data) {
             lastTSMessageTime = new Date(); // Update the timestamp when a new message is received
             var formattedMessage = formatMessageWithTimestamp(data.message);
             backendTsMessages.unshift(formattedMessage); // Prepend the formatted message to the backend list
@@ -194,7 +209,25 @@
     
         // Assuming you've added a similar checkbox for hiding Pong messages in Volumetrica section
         document.getElementById('hide-pong').addEventListener('change', updateVolumetricaMessagesDisplay);
-    
+        socket.on('volumetrica-update_positions', function(data) {
+    var positionsData = JSON.parse(data.data); // Now an array of position objects
+    var table = document.getElementById('volumetrica-positions-table');
+
+    // Clear the table except for the header row
+    while (table.rows.length > 1) {
+        table.deleteRow(1);
+    }
+
+    // Repopulate the table with the new position data
+    positionsData.forEach(function(position) {
+        var newRow = table.insertRow(-1);
+        Object.values(position).forEach(function(value, index) {
+            var cell = newRow.insertCell(index);
+            cell.innerHTML = value;
+        });
+    });
+});
+
         socket.on('update_volumetrica_data', function(data) {
             lastVolumetricaMessageTime = new Date(); // Update the timestamp when a new message is received
             var formattedMessage = formatMessageWithTimestamp(data.message);
@@ -211,6 +244,3 @@
     </script>
 </body>
 </html>
-
-
-
