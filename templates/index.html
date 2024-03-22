@@ -210,7 +210,7 @@
         // Assuming you've added a similar checkbox for hiding Pong messages in Volumetrica section
         document.getElementById('hide-pong').addEventListener('change', updateVolumetricaMessagesDisplay);
         socket.on('volumetrica-update_positions', function(data) {
-    var positionsData = JSON.parse(data.data); // Now an array of position objects
+    var positionsData = JSON.parse(data.data);
     var table = document.getElementById('volumetrica-positions-table');
 
     // Clear the table except for the header row
@@ -218,15 +218,17 @@
         table.deleteRow(1);
     }
 
-    // Repopulate the table with the new position data
+    // Repopulate the table with the updated positions data
     positionsData.forEach(function(position) {
         var newRow = table.insertRow(-1);
+        // Assuming the order of fields matches the table columns
         Object.values(position).forEach(function(value, index) {
             var cell = newRow.insertCell(index);
             cell.innerHTML = value;
         });
     });
 });
+
 
         socket.on('update_volumetrica_data', function(data) {
             lastVolumetricaMessageTime = new Date(); // Update the timestamp when a new message is received

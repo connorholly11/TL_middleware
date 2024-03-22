@@ -11,6 +11,7 @@ username = getpass.getuser()
 def send_orders(access_token, symbol, quantity, trade_action):
     url = "https://sim-api.tradestation.com/v3/orderexecution/orders"
 
+
     payload = {
         "AccountID": "SIM1169695f",
         "Symbol": symbol,
@@ -26,13 +27,16 @@ def send_orders(access_token, symbol, quantity, trade_action):
         "content-type": "application/json",
         "Authorization": f"Bearer {access_token}"
     }
+    if AccNumber != "7":
+        response = requests.request("POST", url, json=payload, headers=headers)
 
-    response = requests.request("POST", url, json=payload, headers=headers)
-
-    print(response.text)
+        print(response.text)
 
 def trade_copier(row):
     print('Entering trade_copier function')
+    print(row["AccNumber"])
+    print("xx"*100)
+    AccNumber = row["AccNumber"]
     original_action = '1' if row['FilledQty'] > 0 else '2'  # 1 = long, 2 = short
     flipped_action = '2' if original_action == '1' else '1'
     symbol = row['FeedSymbol']
@@ -62,13 +66,17 @@ def trade_copier(row):
 
     print(f"Order saved into {file_name} successfully.")
     print("This order came from trade_copier (Volumetrica)")
-
-    send_orders(access_token, converted_symbol_ts, quantity, trade_action)
-    print(f"FIX Message: 8=FIX.4.2|35=D|55={symbol}|54={flipped_action}|40=2|44={price}|38={quantity}")
+    if AccNumber != 7:
+        send_orders(access_token, converted_symbol_ts, quantity, trade_action)
+        print(f"FIX Message: 8=FIX.4.2|35=D|55={symbol}|54={flipped_action}|40=2|44={price}|38={quantity}")
+    else:
+        print("skipping"*100)
 
 
 def send_order_to_tradestation(access_token, volumetrica_order):
+    print("xx"*100)
     # Step 1: Parse Volumetrica Order
+    AccNumber = volumetrica_order.get("AccNumber")
     symbol = volumetrica_order.get("Symbol")
     quantity = volumetrica_order.get("Quantity")
     volumetrica_order_type = volumetrica_order.get("OrderType")
@@ -95,14 +103,16 @@ def send_order_to_tradestation(access_token, volumetrica_order):
         "content-type": "application/json",
         "Authorization": f"Bearer {access_token}"
     }
+    if AccNumber != "7":
+        # Send the POST request to TradeStation
+        response = requests.post(url, json=payload, headers=headers)
 
-    # Send the POST request to TradeStation
-    response = requests.post(url, json=payload, headers=headers)
-
-    if response.status_code == 200:
-        print("Order sent successfully to TradeStation.")
+        if response.status_code == 200:
+            print("Order sent successfully to TradeStation.")
+        else:
+            print(f"Failed to send order. Status Code: {response.status_code}, Response: {response.text}")
     else:
-        print(f"Failed to send order. Status Code: {response.status_code}, Response: {response.text}")
+        return
 
 def send_order_to_ninjatrader(volumetrica_order):
     # Commenting out this line to prevent sending Volumetrica orders to NinjaTrader

@@ -36,7 +36,7 @@ def start_websocket_connections():
     
     if token and wss_uri:
         # Starting TradeStation WebSocket as a background task
-        #socketio.start_background_task(stream_positions_new, ["placeholder"], access_token, socketio)
+        socketio.start_background_task(stream_positions_new, ["placeholder"], access_token, socketio)
         
         # Starting Volumetrica WebSocket as a background task
         socketio.start_background_task(open_websocket, wss_uri, token, socketio)

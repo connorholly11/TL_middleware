@@ -9,26 +9,35 @@ import json
 
 
 reconnection_attempts = 0
-def volumetrica_position_reporter(positions_data, sio):
-    # Ensure positions_data is treated correctly as a list of dictionaries
-    aggregated_reports = []  # Will hold all formatted position reports
-    
-    for position_data in positions_data:
-        report_fields = [
-            'AccNumber', 'FeedSymbol', 'OpenQuantity', 'OpenPrice',
-            'OpenPl', 'DailyPl', 'DailyCommissions'
-        ]
+# Global dictionary to track positions
+positions_tracker = {}
 
-        # Extract the relevant fields from each position data dictionary
-        report_data = {field: position_data.get(field, None) for field in report_fields}
-        aggregated_reports.append(report_data)
-    
-    # Convert the list of aggregated reports to a JSON string for transmission
-    report_str = json.dumps(aggregated_reports)
-    print(f"REPORT DATA: {report_str}")  # For logging
+def volumetrica_position_reporter(position_update, sio):
+    global positions_tracker
 
-    # Emit the processed position reports to the client as a single package
+    for position_data in position_update:
+        # Skip this position if it doesn't have an "OpenPl" value
+        if 'OpenPl' not in position_data or position_data.get('OpenPl') is None:
+            continue
+
+        position_key = f"{position_data.get('AccNumber')}_{position_data.get('FeedSymbol')}"
+        
+        positions_tracker[position_key] = {
+            'AccNumber': position_data.get('AccNumber'),
+            'FeedSymbol': position_data.get('FeedSymbol'),
+            'OpenQuantity': position_data.get('OpenQuantity'),
+            'OpenPrice': position_data.get('OpenPrice'),
+            'OpenPl': position_data.get('OpenPl'),
+            'DailyPl': position_data.get('DailyPl'),
+            'DailyCommissions': position_data.get('DailyCommissions')
+        }
+    
+    updated_positions = [pos for pos in positions_tracker.values() if pos.get('OpenQuantity') is not None]
+    report_str = json.dumps(updated_positions)
+    
     sio.emit('volumetrica-update_positions', {'data': report_str})
+
+
 
 
 
@@ -53,7 +62,7 @@ def open_websocket(wss_uri, token, socketio):
         try:
             response_msg = ptp.ServerResponseMsg()
             response_msg.ParseFromString(message)
-            print(f"{response_msg}")
+            #print(f"{response_msg}")
             socketio.emit('update_volumetrica_data', {'message': f'{response_msg}'})  # Emit the cleaned message
 
             message_dict = protobuf_to_dict(response_msg)  # Convert protobuf message to a dictionary
