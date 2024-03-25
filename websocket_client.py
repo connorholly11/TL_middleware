@@ -174,6 +174,7 @@ def open_websocket(wss_uri, token, socketio):
       request_msg.InfoReq.Modes.append(3)
       request_msg.InfoReq.RequestId = 5
       ws.send(request_msg.SerializeToString(), websocket.ABNF.OPCODE_BINARY)
+      sio.emit('volumetrica-update_positions', {'data': ""})
 
     try:
       ws = websocket.WebSocketApp(wss_uri,
