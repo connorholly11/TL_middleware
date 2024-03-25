@@ -12,7 +12,7 @@ reconnection_attempts = 0
 # Global dictionary to track positions
 positions_tracker = {}
 
-def handle_position_adjustments(message, sio):
+def handle_position_adjustments(message, socketio):
     global positions_tracker
 
     for order_info in message.get('OrderInfo', []):
@@ -34,11 +34,11 @@ def handle_position_adjustments(message, sio):
     # After handling all adjustments, emit the current state
     updated_positions = list(positions_tracker.values())
     report_str = json.dumps(updated_positions)
-    sio.emit('volumetrica-update_positions', {'data': report_str})
+    socketio.emit('volumetrica-update_positions', {'data': report_str})
 
 
 
-def volumetrica_position_reporter(position_update, sio):
+def volumetrica_position_reporter(position_update, socketio):
     global positions_tracker
 
     for position_data in position_update:
@@ -61,7 +61,7 @@ def volumetrica_position_reporter(position_update, sio):
     updated_positions = [pos for pos in positions_tracker.values() if pos.get('OpenQuantity') is not None]
     report_str = json.dumps(updated_positions)
     
-    sio.emit('volumetrica-update_positions', {'data': report_str})
+    socketio.emit('volumetrica-update_positions', {'data': report_str})
 
 
 
@@ -96,6 +96,13 @@ def open_websocket(wss_uri, token, socketio):
               volumetrica_position_reporter(message_dict['PositionInfo'], socketio)
             if 'OrderInfo' in message_dict:
               handle_position_adjustments(message_dict, socketio)
+            if "InfoMsg" in message_dict:
+              account_info = message_dict["InfoMsg"].get("AccountList", [])
+              print("xxx"*100)
+              for acc in account_info:
+                 print(acc)
+              print("xxx"*100)
+              socketio.emit('update_account_info', {'data': json.dumps(account_info)})
 
             # Initialize an empty list to hold our formatted message components
             formatted_messages = []
@@ -174,7 +181,7 @@ def open_websocket(wss_uri, token, socketio):
       request_msg.InfoReq.Modes.append(3)
       request_msg.InfoReq.RequestId = 5
       ws.send(request_msg.SerializeToString(), websocket.ABNF.OPCODE_BINARY)
-      sio.emit('volumetrica-update_positions', {'data': ""})
+      socketio.emit('volumetrica-update_positions', {'data': ""})
 
     try:
       ws = websocket.WebSocketApp(wss_uri,

@@ -71,6 +71,22 @@
                 <!-- Position rows will be dynamically inserted here -->
             </table>
         </div>
+        <div id="account-information">
+            <h2>Account Information</h2>
+            <table id="account-info-table">
+                <tr>
+                    <th>Acc n.</th>
+                    <th>Header</th>
+                    <th>Balance</th>
+                    <th>ProfitTarget</th>
+                    <th>Status</th>
+                    <th>TradingEnabled</th>
+                    <th>COPY</th>
+                </tr>
+                <!-- Account rows will be dynamically inserted here -->
+            </table>
+        </div>
+
         <h2>Volumetrica Logs</h2>
         <div id="volumetrica-messages-display"></div>
     </div>
@@ -141,6 +157,57 @@
             document.getElementById('ts-disconnects').innerText = 'Disconnects: ' + tsDisconnects;
             document.getElementById('volumetrica-disconnects').innerText = 'Disconnects: ' + volumetricaDisconnects;
             }
+            socket.on('update_account_info', function(data) {
+    var accountsData = JSON.parse(data.data);
+    
+    // Store accounts data in local storage
+    localStorage.setItem('accountsData', JSON.stringify(accountsData));    var table = document.getElementById('account-info-table');
+
+    // Ensure the table is cleared except for the header
+    while (table.rows.length > 1) {
+        table.deleteRow(1);
+    }
+
+    // Iterate over each account to populate the table
+    accountsData.forEach(function(account) {
+        var newRow = table.insertRow();
+        
+        // Extract and display key pieces of information
+        var cellAccountNumber = newRow.insertCell();
+        cellAccountNumber.innerHTML = account.accountNumber;
+        
+        var cellAccountHeader = newRow.insertCell();
+        cellAccountHeader.innerHTML = account.accountHeader;
+        
+        var cellBalance = newRow.insertCell();
+        cellBalance.innerHTML = Math.round(account.Balance.Balance);
+
+        
+        var cellProfitTarget = newRow.insertCell();
+        cellProfitTarget.innerHTML = account.Balance.ProfitTarget;
+        
+        var cellStatus = newRow.insertCell();
+        cellStatus.innerHTML = account.Status;
+        
+        var cellIsTradingEnabled = newRow.insertCell();
+        cellIsTradingEnabled.innerHTML = account.IsTradingEnabled;
+
+        // Add COPY checkbox
+        var cellCopy = newRow.insertCell();
+        var copyCheckbox = document.createElement('input');
+        copyCheckbox.type = 'checkbox';
+        copyCheckbox.id = 'copy-' + account.accountNumber; // Unique ID using account number
+        copyCheckbox.name = 'copyCheckbox';
+        copyCheckbox.value = account.accountNumber;
+        cellCopy.appendChild(copyCheckbox);
+    });
+});
+
+
+
+
+
+
             socket.on('ts-update_positions', function(data) {
     var positionData = JSON.parse(data.data);
     var table = document.getElementById('ts-positions-table');
