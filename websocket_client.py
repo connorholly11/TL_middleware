@@ -12,6 +12,32 @@ reconnection_attempts = 0
 # Global dictionary to track positions
 positions_tracker = {}
 
+def handle_position_adjustments(message, sio):
+    global positions_tracker
+
+    for order_info in message.get('OrderInfo', []):
+        acc_number = order_info.get('AccNumber')
+        feed_symbol = order_info.get('FeedSymbol')
+        filled_qty = int(order_info.get('FilledQty', 0))  # Ensure filled_qty is an int
+
+        position_key = f"{acc_number}_{feed_symbol}"
+
+        if position_key in positions_tracker:
+            # Calculate the new quantity but don't update the tracker yet
+            current_qty = int(positions_tracker[position_key].get('OpenQuantity', 0))
+            new_qty = current_qty + filled_qty
+
+            # Remove the position from the tracker if its quantity becomes 0
+            if new_qty == 0:
+                del positions_tracker[position_key]
+
+    # After handling all adjustments, emit the current state
+    updated_positions = list(positions_tracker.values())
+    report_str = json.dumps(updated_positions)
+    sio.emit('volumetrica-update_positions', {'data': report_str})
+
+
+
 def volumetrica_position_reporter(position_update, sio):
     global positions_tracker
 
@@ -68,6 +94,8 @@ def open_websocket(wss_uri, token, socketio):
             message_dict = protobuf_to_dict(response_msg)  # Convert protobuf message to a dictionary
             if 'PositionInfo' in message_dict:
               volumetrica_position_reporter(message_dict['PositionInfo'], socketio)
+            if 'OrderInfo' in message_dict:
+              handle_position_adjustments(message_dict, socketio)
 
             # Initialize an empty list to hold our formatted message components
             formatted_messages = []
