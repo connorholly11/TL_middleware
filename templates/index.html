@@ -103,12 +103,24 @@
         var lastTSMessageTime = new Date();
         var tsDisconnects = 0;
         var tsWasConnected = false; // Initially assume disconnected for the logic to work correctly
-    
+        let readyToUpdate = false; // Flag to indicate readiness for updating server state
+
         function formatMessageWithTimestamp(message) {
             var now = new Date();
             return now.toLocaleTimeString() + ": " + message; // Format: "HH:MM:SS: message"
         }
-    
+        function fetchAndSetCheckedAccounts() {
+    fetch('/get_checked_accounts')
+        .then(response => response.json())
+        .then(data => {
+            const checkedAccounts = data.checkedAccounts;
+            document.querySelectorAll('input[name="copyCheckbox"]').forEach(checkbox => {
+                checkbox.checked = checkedAccounts.includes(parseInt(checkbox.value));
+            });
+            readyToUpdate = true; // Enable updating after initial fetch and set
+        })
+        .catch(error => console.error('Error fetching checked accounts:', error));
+}
         function updateTsMessagesDisplay() {
             var hideHeartbeat = document.getElementById("hide-heartbeat").checked;
             var filteredMessages = backendTsMessages.filter(function(message) {
@@ -158,6 +170,9 @@
             document.getElementById('volumetrica-disconnects').innerText = 'Disconnects: ' + volumetricaDisconnects;
             }
             document.addEventListener('DOMContentLoaded', function() {
+
+            fetchAndSetCheckedAccounts(); // Fetch and set checkboxes based on server data
+
     // Check if accounts data is stored in local storage
     var storedAccountsData = localStorage.getItem('accountsData');
     if (storedAccountsData) {
@@ -175,10 +190,11 @@
 });
 
 function updateCheckedAccounts() {
-    // Collect all checked account numbers
-    const checkedAccounts = Array.from(document.querySelectorAll('input[name="copyCheckbox"]:checked')).map(checkbox => checkbox.value);
+    // Prevent update action before initial set-up is complete
+    if (!readyToUpdate) return;
 
-    // Send the full list of checked account numbers to the backend
+    const checkedAccounts = Array.from(document.querySelectorAll('input[name="copyCheckbox"]:checked')).map(checkbox => parseInt(checkbox.value));
+    
     fetch('/update_checked_accounts', {
         method: 'POST',
         headers: {

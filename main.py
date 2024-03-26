@@ -17,6 +17,10 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
+@app.route('/get_checked_accounts')
+def get_checked_accounts():
+    from shared import accs_to_copy
+    return jsonify({'checkedAccounts': accs_to_copy})
 
 
 @app.route('/update_checked_accounts', methods=['POST'])
