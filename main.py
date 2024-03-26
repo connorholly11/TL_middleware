@@ -4,19 +4,39 @@ from auth import get_access_token, get_accounts, get_api_key, authenticate_user,
 from data_logging import append_position_info_to_csv, append_order_info_to_csv, database_reporter, our_trades_logger, event_logger
 from trade_operations import trade_copier, send_orders, send_order_to_tradestation
 from TS_API import get_accounts, get_historical_orders, stream_positions_new, stream_bars, get_positions, get_bars
-from websocket_client import open_websocket, send_positions_request
+from websocket_client import open_websocket
 from tradestation_to_nt import process_tradestation_orders
-
-
+import shared
 ########### FLASK APP START
 
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 import logging
 import threading
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+
+
+@app.route('/update_checked_accounts', methods=['POST'])
+def update_checked_accounts():
+    data = request.json
+    checked_accounts = data.get('checkedAccounts', [])
+    
+    # Prepare the Python list as a string
+    accounts_str = ', '.join([str(acc) for acc in checked_accounts])
+    new_content = f'accs_to_copy = [{accounts_str}]\n'
+
+    # Rewrite the file with the updated list
+    with open('shared.py', 'w') as file:
+        file.write(new_content)
+
+    return jsonify({'status': 'success', 'message': 'File updated'})
+
+
 
 access_token = get_access_token()
-app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route('/')

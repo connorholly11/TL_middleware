@@ -161,11 +161,45 @@
     // Check if accounts data is stored in local storage
     var storedAccountsData = localStorage.getItem('accountsData');
     if (storedAccountsData) {
-        // Parse the stored data back into an array
         var accountsData = JSON.parse(storedAccountsData);
         updateAccountInfoTable(accountsData);
     }
+
+    // Attach change event listeners to checkboxes for "copy" action
+    document.querySelectorAll('input[name="copyCheckbox"]').forEach(function(checkbox) {
+        checkbox.addEventListener('change', updateCheckedAccounts);
+    });
+
+    // Initially call updateCheckedAccounts to sync with the backend on page load
+    updateCheckedAccounts();
 });
+
+function updateCheckedAccounts() {
+    // Collect all checked account numbers
+    const checkedAccounts = Array.from(document.querySelectorAll('input[name="copyCheckbox"]:checked')).map(checkbox => checkbox.value);
+
+    // Send the full list of checked account numbers to the backend
+    fetch('/update_checked_accounts', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({checkedAccounts: checkedAccounts}),
+    })
+    .then(response => response.json())
+    .then(data => console.log('Update response:', data))
+    .catch(error => console.error('Error updating checked accounts:', error));
+}
+
+// Modify your existing getSelectedAccounts to call sendAccountInfo
+function getSelectedAccounts() {
+    var selectedAccounts = [];
+    document.querySelectorAll('input[name="copyCheckbox"]:checked').forEach(function(checkbox) {
+        selectedAccounts.push(checkbox.value);
+        sendAccountInfo(checkbox.value); // Call sendAccountInfo for each checked account
+    });
+    // The rest of your getSelectedAccounts function...
+}
 
 function updateAccountInfoTable(accountsData) {
     var table = document.getElementById('account-info-table');

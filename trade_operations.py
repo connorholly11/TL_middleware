@@ -3,6 +3,10 @@ from auth import get_access_token
 import time
 import getpass
 import os
+import shared
+import importlib
+
+
 
 username = getpass.getuser()
 access_token = get_access_token()
@@ -27,16 +31,17 @@ def send_orders(access_token, symbol, quantity, trade_action):
         "content-type": "application/json",
         "Authorization": f"Bearer {access_token}"
     }
-    if AccNumber != "7":
-        response = requests.request("POST", url, json=payload, headers=headers)
+    response = requests.request("POST", url, json=payload, headers=headers)
 
-        print(response.text)
+    print(response.text)
 
 def trade_copier(row):
     print('Entering trade_copier function')
-    print(row["AccNumber"])
     print("xx"*100)
+    importlib.reload(shared)
+
     AccNumber = row["AccNumber"]
+    ass_to_copy_list = shared.accs_to_copy
     original_action = '1' if row['FilledQty'] > 0 else '2'  # 1 = long, 2 = short
     flipped_action = '2' if original_action == '1' else '1'
     symbol = row['FeedSymbol']
@@ -65,8 +70,11 @@ def trade_copier(row):
         file.write(NT_order)
 
     print(f"Order saved into {file_name} successfully.")
-    print("This order came from trade_copier (Volumetrica)")
-    if AccNumber != 7:
+    print("This order came from trade_copier (Volumetrica)"*100)
+    print(AccNumber)
+    print(ass_to_copy_list)
+    if AccNumber in ass_to_copy_list:
+        print("TRUE")
         send_orders(access_token, converted_symbol_ts, quantity, trade_action)
         print(f"FIX Message: 8=FIX.4.2|35=D|55={symbol}|54={flipped_action}|40=2|44={price}|38={quantity}")
     else:
@@ -103,16 +111,14 @@ def send_order_to_tradestation(access_token, volumetrica_order):
         "content-type": "application/json",
         "Authorization": f"Bearer {access_token}"
     }
-    if AccNumber != "7":
-        # Send the POST request to TradeStation
-        response = requests.post(url, json=payload, headers=headers)
+    # Send the POST request to TradeStation
+    response = requests.post(url, json=payload, headers=headers)
 
-        if response.status_code == 200:
-            print("Order sent successfully to TradeStation.")
-        else:
-            print(f"Failed to send order. Status Code: {response.status_code}, Response: {response.text}")
+    if response.status_code == 200:
+        print("Order sent successfully to TradeStation.")
     else:
-        return
+        print(f"Failed to send order. Status Code: {response.status_code}, Response: {response.text}")
+
 
 def send_order_to_ninjatrader(volumetrica_order):
     # Commenting out this line to prevent sending Volumetrica orders to NinjaTrader
