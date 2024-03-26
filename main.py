@@ -17,6 +17,8 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
+
+
 @app.route('/get_checked_accounts')
 def get_checked_accounts():
     from shared import accs_to_copy
@@ -37,6 +39,8 @@ def update_checked_accounts():
         file.write(new_content)
 
     return jsonify({'status': 'success', 'message': 'File updated'})
+
+
 
 
 

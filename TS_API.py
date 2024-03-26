@@ -43,14 +43,14 @@ def stream_positions_new(account_IDs, access_token, sio):  # Accept socketio ins
                 print(message_str)  # Print the concatenated message string for logging
 
                 event_logger("Tradestation WS", message_str)
-                sio.emit('update_data', {'message': message_str})  # Emit the single string
+                sio.emit('ts-update_data', {'message': message_str})  # Emit the single string
             except json.JSONDecodeError:
                 print("Error decoding JSON")
-                sio.emit('update_data', {'message': f'Error decoding JSON'})  # Emit the cleaned message
+                sio.emit('ts-update_data', {'message': f'Error decoding JSON'})  # Emit the cleaned message
 
             except KeyError as e:
                 print(f"Key error: {e}")
-                sio.emit('update_data', {'message': f'Key error: {e}'})  # Emit the cleaned message
+                sio.emit('ts-update_data', {'message': f'Key error: {e}'})  # Emit the cleaned message
 
 
 
