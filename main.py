@@ -2,7 +2,7 @@
 import PropTradingProtocol_pb2 as ptp
 from auth import get_access_token, get_accounts, get_api_key, authenticate_user, get_accounts
 from data_logging import append_position_info_to_csv, append_order_info_to_csv, database_reporter, our_trades_logger, event_logger
-from trade_operations import trade_copier, send_orders, send_order_to_tradestation
+from trade_operations import trade_copier, send_orders, send_order_to_tradestation, trade_synchronizer
 from TS_API import get_accounts, get_historical_orders, stream_positions_new, stream_bars, get_positions, get_bars
 from websocket_client import open_websocket
 from tradestation_to_nt import process_tradestation_orders
@@ -14,10 +14,30 @@ from flask_socketio import SocketIO, emit
 import logging
 import threading
 from flask import Flask, request, jsonify
+import importlib
 
 app = Flask(__name__)
 
+@app.route('/synchronize_positions', methods=['POST'])
+def synchronize_positions():
+    importlib.reload(shared)
+    data = request.json
+    ts_positions = data.get('tsPositions', [])
+    volumetrica_positions = data.get('volumetricaPositions', [])
 
+    # Filter positions by accs_to_copy
+    filtered_volumetrica_positions = [pos for pos in volumetrica_positions if int(pos[0]) in shared.accs_to_copy]
+    # Convert positions to string representations
+    ts_content = f'ts_positions = {ts_positions}\n'
+    volumetrica_content = f'volumetrica_positions = {filtered_volumetrica_positions}\n'
+
+    # Write to files
+    with open('tradestation_pos.py', 'w') as ts_file:
+        ts_file.write(ts_content)
+    with open('volumetrica_pos.py', 'w') as volumetrica_file:
+        volumetrica_file.write(volumetrica_content)
+    trade_synchronizer()
+    return jsonify({'status': 'success', 'message': 'Positions synchronized'})
 
 @app.route('/get_checked_accounts')
 def get_checked_accounts():

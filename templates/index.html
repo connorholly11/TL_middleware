@@ -4,6 +4,9 @@
     <title>Dashboard</title>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
+    #sync-positions-btn-container {
+        margin-top: 20px; /* Adjust as needed for your desired spacing */
+    }
         body {
             display: flex;
             margin: 0;
@@ -44,8 +47,11 @@
                 </tr>
                 <!-- Position rows will be dynamically inserted here -->
             </table>
+            <div id="sync-positions-btn-container">
+                <button id="sync-positions-btn">Synchronize positions</button>
+            </div>
         </div>
-
+        
 
         <h2>Tradestation Logs</h2>
         <div id="ts-messages-display"></div>
@@ -143,7 +149,38 @@
                 return '<p>' + (index + 1) + ': ' + msg + '</p>';
             }).join('');
         }
-    
+        document.getElementById('sync-positions-btn').addEventListener('click', function() {
+    // Extract positions from the tables
+    let tsPositions = extractTableData('ts-positions-table');
+    let volumetricaPositions = extractTableData('volumetrica-positions-table');
+
+    // Send this data to the server
+    fetch('/synchronize_positions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tsPositions, volumetricaPositions }),
+    })
+    .then(response => response.json())
+    .then(data => console.log('Synchronization response:', data))
+    .catch(error => console.error('Error during synchronization:', error));
+});
+
+function extractTableData(tableId) {
+    let table = document.getElementById(tableId);
+    let data = [];
+    for (let i = 1; i < table.rows.length; i++) { // Start at 1 to skip header row
+        let row = table.rows[i];
+        let rowData = [];
+        for (let j = 0; j < row.cells.length; j++) {
+            rowData.push(row.cells[j].innerText);
+        }
+        data.push(rowData);
+    }
+    return data;
+}
+
         function updateTitleBasedOnConnection() {
             var now = new Date();
             var tsConnected = now - lastTSMessageTime < 5000;
@@ -329,7 +366,7 @@ socket.on('update_account_info', function(data) {
             lastTSMessageTime = new Date(); // Update the timestamp when a new message is received
             var formattedMessage = formatMessageWithTimestamp(data.message);
             backendTsMessages.unshift(formattedMessage); // Prepend the formatted message to the backend list
-            document.getElementById('last-ts-received-time').innerText = lastVolumetricaMessageTime.toLocaleTimeString();
+            document.getElementById('last-ts-received-time').innerText = lastTSMessageTime.toLocaleTimeString();
     
             if (backendTsMessages.length > tsMessagesDisplayLimit) {
                 backendTsMessages.length = tsMessagesDisplayLimit; // Trim the backend list if it exceeds the limit
@@ -367,6 +404,8 @@ socket.on('update_account_info', function(data) {
 
         socket.on('update_volumetrica_data', function(data) {
             lastVolumetricaMessageTime = new Date(); // Update the timestamp when a new message is received
+            document.getElementById('last-volumetrica-received-time').innerText = lastVolumetricaMessageTime.toLocaleTimeString();
+
             var formattedMessage = formatMessageWithTimestamp(data.message);
             backendVolumetricaMessages.unshift(formattedMessage); // Prepend the formatted message to the backend list
     

@@ -5,7 +5,9 @@ import getpass
 import os
 import shared
 import importlib
-
+import tradestation_pos
+import volumetrica_pos
+import time
 
 
 username = getpass.getuser()
@@ -34,6 +36,71 @@ def send_orders(access_token, symbol, quantity, trade_action):
     response = requests.request("POST", url, json=payload, headers=headers)
 
     print(response.text)
+
+
+def trade_synchronizer():
+    print('Entering trade_synchronizer function'*100)
+    importlib.reload(tradestation_pos)
+    importlib.reload(volumetrica_pos)
+
+    def convert_symbol(symbol):
+        return symbol.replace('/', '').replace(':XCME', '')
+
+    # Process Volumetrica positions
+    volumetrica_positions = {}
+    for pos in volumetrica_pos.volumetrica_positions:
+        if int(pos[0]) in shared.accs_to_copy:  # Ensure only specified accounts are processed
+            symbol, quantity = convert_symbol(pos[1]), int(pos[2])
+            volumetrica_positions[symbol] = volumetrica_positions.get(symbol, 0) + quantity
+
+    # Process Tradestation positions
+    tradestation_positions = {}
+    for pos in tradestation_pos.ts_positions:
+        symbol, direction, quantity = convert_symbol(pos[1]), pos[2], int(pos[3])
+        if direction == "Short":
+            quantity = -quantity
+        tradestation_positions[symbol] = tradestation_positions.get(symbol, 0) + quantity
+
+    # Determine differences and generate orders
+    all_symbols = set(volumetrica_positions.keys()) | set(tradestation_positions.keys())
+    for symbol in all_symbols:
+        v_qty = volumetrica_positions.get(symbol, 0)
+        ts_qty = tradestation_positions.get(symbol, 0)
+        difference = v_qty - ts_qty
+
+        if difference != 0:
+            trade_action = "BUY" if difference > 0 else "SELL"
+            quantity = abs(difference)
+
+            send_orders(access_token, symbol, quantity, trade_action)  # Make sure this function exists and is properly defined
+
+            NT_order = f"PLACE;Sim101;{symbol};{trade_action};{quantity};MARKET;;;DAY;;;;"
+            timestamp_ns = int(time.time() * 1e9)
+            file_name = f"oif{timestamp_ns}.txt"
+            file_path = rf"C:\Users\{username}\Documents\NinjaTrader 8\incoming\{file_name}"
+
+            with open(file_path, 'w') as file:
+                file.write(NT_order)
+            
+            print(f"Order saved into {file_name} successfully.")
+            print("This order came from trade_synchronizer (Volumetrica)")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def trade_copier(row):
     print('Entering trade_copier function')

@@ -8,7 +8,6 @@ from trade_operations import trade_copier
 
 
 
-
 def append_position_info_to_csv(position_infos):
   csv_file_name = "position_info.csv"
   headers = [
