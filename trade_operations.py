@@ -130,8 +130,8 @@ def trade_copier(row):
     file_name = f"oif{timestamp_ns}.txt"
 
     # Define the file path including the dynamic file name
-    file_path = rf"C:\Users\{username}\Documents\NinjaTrader 8\incoming\{file_name}"
-
+    #file_path = rf"C:\Users\{username}\Documents\NinjaTrader 8\incoming\{file_name}"
+    file_path = ""
     # Save the NT_order string into the dynamically named file
     with open(file_path, 'w') as file:
         file.write(NT_order)

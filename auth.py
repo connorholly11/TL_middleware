@@ -26,13 +26,13 @@ load_dotenv()
 
 def authenticate_user(): #### volumetrica trader login
   auth_url = "https://authdxfeed.volumetricatrading.com/api/auth/token"
-  david_login = " augulis.david@gmail.com"
-  david_password = os.environ.get('DAVID_PASSWORD')
+  system_user_login = os.environ.get('SYSTEM_USER_LOGIN')
+  system_user_password = os.environ.get('SYSTEM_USER_PASSWORD')
   plt_key = os.environ.get('PLT_KEY')
   headers = {"PltfKey": plt_key}
   payload = {
-      "login": david_login,
-      "password": david_password,
+      "login": system_user_login,
+      "password": system_user_password,
       "withDetails": True,
       "version": 2,
       "environment": 1,
